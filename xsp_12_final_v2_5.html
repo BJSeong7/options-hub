@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>XSP 12 전략 - BEP 기준</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: #f4f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif; color: #111; }
+  .strategy-picker { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid #ececec; padding: 12px 16px 10px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .strategy-picker::-webkit-scrollbar { display: none; }
+  .strategy-chip { display: inline-block; padding: 7px 13px; margin-right: 6px; font-size: 13px; font-weight: 500; color: #6a6a72; background: #f2f2f5; border-radius: 16px; cursor: pointer; transition: all 0.15s; }
+  .strategy-chip.active { background: #111; color: #fff; font-weight: 600; }
+  .screen { max-width: 420px; margin: 0 auto; background: #fff; min-height: 100vh; padding-bottom: 40px; }
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 8px; }
+  .header .left { display: flex; align-items: center; gap: 12px; }
+  .header .back { font-size: 22px; color: #111; font-weight: 300; }
+  .header .symbol { font-size: 16px; font-weight: 600; color: #111; }
+  .header .symbol-sub { font-size: 14px; color: #6a6a72; font-weight: 400; margin-left: 4px; }
+  .header .setting { font-size: 14px; color: #6a6a72; }
+  .title-block { padding: 12px 20px 4px; }
+  .title-row { display: flex; align-items: center; gap: 8px; }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: #111; }
+  .title-help { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #e5e5ea; color: #8a8a90; font-size: 11px; align-items: center; justify-content: center; font-weight: 600; }
+  .title-desc { margin-top: 10px; font-size: 13px; color: #6a6a72; line-height: 1.55; }
+  .expiry-tabs { display: flex; gap: 24px; padding: 18px 20px 0; border-bottom: 1px solid #f0f0f2; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .expiry-tabs::-webkit-scrollbar { display: none; }
+  .expiry-tab { padding: 6px 0 12px; font-size: 15px; color: #b0b0b8; position: relative; font-weight: 500; flex-shrink: 0; }
+  .expiry-tab .date { color: #111; font-weight: 600; }
+  .expiry-tab.active .sub { color: #2979ff; font-weight: 600; }
+  .expiry-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: #111; }
+  .expiry-tab .sub { margin-left: 4px; font-size: 13px; color: #b0b0b8; }
+  .col-header { display: flex; justify-content: space-between; padding: 20px 20px 10px; font-size: 12px; color: #b0b0b8; }
+  .chain { padding: 0; }
+  .row { padding: 14px 20px; position: relative; border-bottom: 1px solid #f5f5f7; }
+  .row.profit { background: #fff4f2; }
+  .row.loss { background: #eef5ff; }
+  .row.neutral { background: #fff; }
+  .row-top { display: flex; justify-content: space-between; align-items: center; }
+  .strike { font-size: 15px; font-weight: 600; color: #111; letter-spacing: -0.3px; }
+  .strike-sub { font-size: 12px; color: #8a8a90; margin-top: 4px; font-weight: 400; }
+  .premium { background: #ff3d3d; color: #fff; padding: 7px 14px; border-radius: 20px; font-size: 14px; font-weight: 700; min-width: 80px; text-align: center; }
+  .premium.pay { background: #2979ff; }
+  .bep-line { margin-top: 8px; font-size: 13.5px; color: #111; font-weight: 600; letter-spacing: -0.2px; }
+  .bep-line strong { font-weight: 800; }
+  .current-price { position: relative; margin: 8px 0; }
+  .current-price-bar { display: flex; justify-content: space-between; padding: 0 20px; font-size: 11px; color: #b0b0b8; margin-bottom: -12px; }
+  .current-price-bar .up { color: #ff3d3d; }
+  .current-price-bar .down { color: #2979ff; }
+  .current-price-pill { background: #fff; border: 1px solid #e5e5ea; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #111; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: absolute; left: 50%; transform: translateX(-50%); top: 0; white-space: nowrap; }
+  .divider-strip { height: 28px; position: relative; }
+
+  /* 행사가 칩 */
+  .strike-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .sc { display: inline-flex; flex-direction: column; align-items: center;
+        border-radius: 6px; padding: 2px 7px; font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .sc-lbl { font-size: 9px; font-weight: 500; opacity: .7; line-height: 1; margin-bottom: 1px; }
+  .sc.buy  { background: #eef3ff; color: #2060d0; border: 1.2px solid #b8ccf5; }
+  .sc.sell { background: #fff1f0; color: #d0302a; border: 1.2px solid #f5b8b8; }
+  .sc-slash { font-size: 13px; color: #ccc; font-weight: 400; }
+  /* 설명 텍스트 강조 */
+  .title-desc { margin-top: 10px; font-size: 13px; color: #6a6a72; line-height: 1.6; }
+  .title-desc .hl { font-weight: 700; color: #111; }
+  .title-desc .note { font-size: 12px; color: #aaa; margin-top: 3px; display: block; }
+
+  .row.disabled { background: #f7f7f8; opacity: 0.55; pointer-events: none; }
+  .row.disabled .premium { background: #c0c0c8; }
+  .row.disabled .premium.pay { background: #c0c0c8; }
+  .unavail { font-size: 12px; color: #aaa; margin-top: 4px; font-weight: 500; }
+
+  .warn-banner{margin:4px 0 0;background:#fffbea;border-top:1px solid #f5d84a;border-bottom:1px solid #f5d84a;padding:10px 20px;display:flex;align-items:flex-start;gap:8px}
+  .warn-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+  .warn-text{font-size:12px;color:#7a5c00;line-height:1.55;font-weight:500}
+  .warn-text b{font-weight:700;color:#5a4200}
+  .row.disabled{background:#f7f7f8}
+  .row.disabled .premium,.row.disabled .premium.pay{background:#c8c8d0!important}
+  .row.disabled .strike-chips .sc{opacity:.5}
+  .row.disabled .strike-sub{color:#bbb}
+  .unavail-wrap{margin-top:8px;display:flex;align-items:center;gap:6px}
+  .unavail-badge{display:inline-flex;align-items:center;gap:4px;background:#ebebee;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:#888}
+  .unavail-badge .dot{width:6px;height:6px;border-radius:50%;background:#c8c8d0;flex-shrink:0}
+  .unavail-reason{font-size:11px;color:#bbb}
+  .strategy-view { display: none; }
+  .strategy-view.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="strategy-picker">
+  <div class="strategy-chip active" data-id="long-call">1. 롱 콜</div>
+  <div class="strategy-chip" data-id="long-put">2. 롱 풋</div>
+  <div class="strategy-chip" data-id="bull-call">3. 롱 콜 스프레드</div>
+  <div class="strategy-chip" data-id="bear-call">4. 숏 콜 스프레드</div>
+  <div class="strategy-chip" data-id="bear-put">5. 롱 풋 스프레드</div>
+  <div class="strategy-chip" data-id="bull-put">6. 숏 풋 스프레드</div>
+  <div class="strategy-chip" data-id="long-straddle">7. 롱 스트래들</div>
+  <div class="strategy-chip" data-id="long-strangle">8. 롱 스트랭글</div>
+  <div class="strategy-chip" data-id="short-iron-condor">9. 숏 아이언 콘도르</div>
+  <div class="strategy-chip" data-id="long-iron-condor">10. 롱 아이언 콘도르</div>
+  <div class="strategy-chip" data-id="short-iron-butterfly">11. 숏 아이언 버터플라이</div>
+  <div class="strategy-chip" data-id="long-iron-butterfly">12. 롱 아이언 버터플라이</div>
+</div>
+
+
+<div class="screen strategy-view active" data-view="long-call">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 콜</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">구매</span>행사가</span>보다 <span class="hl">위로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$703</span></div>
+          <div class="strike-sub">이론가격 $7.63  최저가 $5.29</div>
+        </div>
+        <div class="premium pay">$7.68</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $6.74  최저가 $4.40</div>
+        </div>
+        <div class="premium pay">$6.80</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $5.89  최저가 $2.97</div>
+        </div>
+        <div class="premium pay">$5.95</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $5.08  최저가 $2.87</div>
+        </div>
+        <div class="premium pay">$5.18</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $4.29  최저가 $2.26</div>
+        </div>
+        <div class="premium pay">$4.34</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $3.57  최저가 $1.81</div>
+        </div>
+        <div class="premium pay">$3.61</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $2.90  최저가 $1.45</div>
+        </div>
+        <div class="premium pay">$2.93</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $2.30  최저가 $0.91</div>
+        </div>
+        <div class="premium pay">$2.33</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="long-put">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 풋</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">구매</span>행사가</span>보다 <span class="hl">아래로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$703</span></div>
+          <div class="strike-sub">이론가격 $0.51  최저가 $0.43</div>
+        </div>
+        <div class="premium pay">$0.55</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $0.62  최저가 $0.52</div>
+        </div>
+        <div class="premium pay">$0.66</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.77  최저가 $0.55</div>
+        </div>
+        <div class="premium pay">$0.81</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.96  최저가 $0.68</div>
+        </div>
+        <div class="premium pay">$1.00</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $1.18  최저가 $0.78</div>
+        </div>
+        <div class="premium pay">$1.23</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $1.45  최저가 $0.90</div>
+        </div>
+        <div class="premium pay">$1.51</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $1.78  최저가 $1.12</div>
+        </div>
+        <div class="premium pay">$1.84</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $2.18  최저가 $1.31</div>
+        </div>
+        <div class="premium pay">$2.25</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="bull-call">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 콜 스프레드</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">구매</span>행사가</span>보다 <span class="hl">위로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (롱 콜 / 숏 콜)</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$703</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $0.89  최저가 $0.89</div>
+        </div>
+        <div class="premium pay">$1.03</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.85  최저가 $1.43</div>
+        </div>
+        <div class="premium pay">$1.02</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.81  최저가 $0.10</div>
+        </div>
+        <div class="premium pay">$0.96</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.78  최저가 $0.61</div>
+        </div>
+        <div class="premium pay">$0.88</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.72  최저가 $0.45</div>
+        </div>
+        <div class="premium pay">$0.82</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.67  최저가 $0.36</div>
+        </div>
+        <div class="premium pay">$0.76</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.60  최저가 $0.54</div>
+        </div>
+        <div class="premium pay">$0.69</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.53  최저가 $0.03</div>
+        </div>
+        <div class="premium pay">$0.64</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="bear-call">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">숏 콜 스프레드</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc sell" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">판매</span>행사가</span>보다 <span class="hl">아래로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (숏 콜 / 롱 콜)</span>
+    <span>받을 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$703</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $0.89  최저가 $0.89</div>
+        </div>
+        <div class="premium">$0.71</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$703.71</strong> 아래</div>
+    </div>
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.85  최저가 $1.43</div>
+        </div>
+        <div class="premium">$0.69</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$704.69</strong> 아래</div>
+    </div>
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.81  최저가 $0.10</div>
+        </div>
+        <div class="premium">$0.60</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$705.60</strong> 아래</div>
+    </div>
+
+<div class="current-price">
+      <div class="current-price-bar"><span class="up">수익 예상 ↓</span><span class="down">손실 예상 ↑</span></div>
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40 (만기 손익분기)</div>
+      </div>
+    </div>
+
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.78  최저가 $0.61</div>
+        </div>
+        <div class="premium">$0.67</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$706.67</strong> 아래</div>
+    </div>
+
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.72  최저가 $0.45</div>
+        </div>
+        <div class="premium">$0.62</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$707.62</strong> 아래</div>
+    </div>
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.67  최저가 $0.36</div>
+        </div>
+        <div class="premium">$0.58</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$708.58</strong> 아래</div>
+    </div>
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.60  최저가 $0.54</div>
+        </div>
+        <div class="premium">$0.51</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$709.51</strong> 아래</div>
+    </div>
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.53  최저가 $0.03</div>
+        </div>
+        <div class="premium">$0.44</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$710.44</strong> 아래</div>
+    </div>
+
+    <div class="row">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips">
+            <span class="sc sell"><span class="sc-lbl">판매</span>$711</span>
+            <span class="sc-slash">/</span>
+            <span class="sc buy"><span class="sc-lbl">구매</span>$712</span>
+          </div>
+          <div class="strike-sub">이론가격 $0.41&nbsp; 최저가 $0.02</div>
+        </div>
+        <div class="premium">-$0.12</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="bear-put">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 풋 스프레드</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">구매</span>행사가</span>보다 <span class="hl">아래로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (숏 풋 / 롱 풋)</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$703</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $0.11  최저가 $0.09</div>
+        </div>
+        <div class="premium pay">$0.18</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.15  최저가 $0.03</div>
+        </div>
+        <div class="premium pay">$0.21</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.19  최저가 $0.13</div>
+        </div>
+        <div class="premium pay">$0.25</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.22  최저가 $0.10</div>
+        </div>
+        <div class="premium pay">$0.30</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.28  최저가 $0.12</div>
+        </div>
+        <div class="premium pay">$0.36</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.33  최저가 $0.22</div>
+        </div>
+        <div class="premium pay">$0.43</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.40  최저가 $0.19</div>
+        </div>
+        <div class="premium pay">$0.49</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">판매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">구매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.47  최저가 $0.23</div>
+        </div>
+        <div class="premium pay">$0.55</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="bull-put">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">숏 풋 스프레드</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc sell" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">판매</span>행사가</span>보다 <span class="hl">위로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (롱 풋 / 숏 풋)</span>
+    <span>받을 프리미엄</span>
+  </div>
+  <div class="chain">
+
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$703</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $0.11  최저가 $0.09</div>
+        </div>
+        <div class="premium">$0.05</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$703.95</strong> 위</div>
+    </div>
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.15  최저가 $0.03</div>
+        </div>
+        <div class="premium">$0.09</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$704.91</strong> 위</div>
+    </div>
+    <div class="row profit">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.19  최저가 $0.13</div>
+        </div>
+        <div class="premium">$0.12</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$705.88</strong> 위</div>
+    </div>
+<div class="current-price">
+      <div class="current-price-bar"><span class="down">손실 예상 ↓</span><span class="up">수익 예상 ↑</span></div>
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40 (만기 손익분기)</div>
+      </div>
+    </div>
+
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.22  최저가 $0.10</div>
+        </div>
+        <div class="premium">$0.14</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$706.86</strong> 위</div>
+    </div>
+
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.28  최저가 $0.12</div>
+        </div>
+        <div class="premium">$0.18</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$707.82</strong> 위</div>
+    </div>
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.33  최저가 $0.22</div>
+        </div>
+        <div class="premium">$0.22</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$708.78</strong> 위</div>
+    </div>
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.40  최저가 $0.19</div>
+        </div>
+        <div class="premium">$0.31</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$709.69</strong> 위</div>
+    </div>
+    <div class="row loss">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">구매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">판매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.47  최저가 $0.23</div>
+        </div>
+        <div class="premium">$0.39</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$710.61</strong> 위</div>
+    </div>
+
+    <div class="row">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips">
+            <span class="sc buy"><span class="sc-lbl">구매</span>$700</span>
+            <span class="sc-slash">/</span>
+            <span class="sc sell"><span class="sc-lbl">판매</span>$701</span>
+          </div>
+          <div class="strike-sub">이론가격 $0.08&nbsp; 최저가 $0.01</div>
+        </div>
+        <div class="premium">-$0.07</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="long-straddle">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 스트래들</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">구매</span>행사가</span>에서 <span class="hl">크게 벗어나야</span> 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (롱 콜 / 롱 풋)</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$703</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$703</span></div>
+          <div class="strike-sub">이론가격 $8.14  최저가 $5.72</div>
+        </div>
+        <div class="premium pay">$8.23</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $7.36  최저가 $4.92</div>
+        </div>
+        <div class="premium pay">$7.46</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $6.66  최저가 $3.52</div>
+        </div>
+        <div class="premium pay">$6.76</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $6.04  최저가 $3.55</div>
+        </div>
+        <div class="premium pay">$6.18</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $5.47  최저가 $3.04</div>
+        </div>
+        <div class="premium pay">$5.57</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $5.02  최저가 $2.71</div>
+        </div>
+        <div class="premium pay">$5.12</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $4.68  최저가 $2.57</div>
+        </div>
+        <div class="premium pay">$4.77</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">콜 구매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $4.48  최저가 $2.22</div>
+        </div>
+        <div class="premium pay">$4.57</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="long-strangle">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 스트랭글</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">풋 구매</span>행사가</span> <span class="hl">아래</span> 또는 <span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">콜 구매</span>행사가</span> <span class="hl">위로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (롱 풋 / 롱 콜)</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$703</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$704</span></div>
+          <div class="strike-sub">이론가격 $7.25  최저가 $4.83</div>
+        </div>
+        <div class="premium pay">$7.35</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $6.51  최저가 $3.49</div>
+        </div>
+        <div class="premium pay">$6.61</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $5.85  최저가 $3.42</div>
+        </div>
+        <div class="premium pay">$5.99</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $5.26  최저가 $2.94</div>
+        </div>
+        <div class="premium pay">$5.34</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $4.75  최저가 $2.59</div>
+        </div>
+        <div class="premium pay">$4.84</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $4.35  최저가 $2.35</div>
+        </div>
+        <div class="premium pay">$4.44</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $4.08  최저가 $2.03</div>
+        </div>
+        <div class="premium pay">$4.17</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $3.95  최저가 $2.19</div>
+        </div>
+        <div class="premium pay">$4.04</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="short-iron-condor">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">숏 아이언 콘도르</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc sell" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">풋 판매</span>행사가</span>와 <span class="sc sell" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">콜 판매</span>행사가</span> <span class="hl">사이에서</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (롱 풋 / 숏 풋 / 숏 콜 / 롱 콜)</span>
+    <span>받을 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$703</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.93  최저가 $0.19</div>
+        </div>
+        <div class="premium">$0.65</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$703.35 ~ $705.65</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.93  최저가 $0.64</div>
+        </div>
+        <div class="premium">$0.76</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$704.24 ~ $706.76</strong> 사이</div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.92  최저가 $0.58</div>
+        </div>
+        <div class="premium">$0.75</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$705.25 ~ $707.75</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.89  최저가 $0.46</div>
+        </div>
+        <div class="premium">$0.73</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$706.27 ~ $708.73</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.88  최저가 $0.66</div>
+        </div>
+        <div class="premium">$0.69</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$707.31 ~ $709.69</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.86  최저가 $0.25</div>
+        </div>
+        <div class="premium">$0.68</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$708.32 ~ $710.68</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$711</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$712</span></div>
+          <div class="strike-sub">이론가격 $0.84  최저가 $0.42</div>
+        </div>
+        <div class="premium">$0.65</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$709.35 ~ $711.65</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$711</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$712</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$713</span></div>
+          <div class="strike-sub">이론가격 $0.84  최저가 $0.43</div>
+        </div>
+        <div class="premium">$0.65</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$710.35 ~ $712.65</strong> 사이</div>
+    </div>
+
+    <div class="row">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips">
+            <span class="sc buy"><span class="sc-lbl">풋 구매</span>$700</span>
+            <span class="sc-slash">/</span>
+            <span class="sc sell"><span class="sc-lbl">풋 판매</span>$701</span>
+            <span class="sc-slash">/</span>
+            <span class="sc sell"><span class="sc-lbl">콜 판매</span>$712</span>
+            <span class="sc-slash">/</span>
+            <span class="sc buy"><span class="sc-lbl">콜 구매</span>$713</span>
+          </div>
+          <div class="strike-sub">이론가격 $0.71&nbsp; 최저가 $0.05</div>
+        </div>
+        <div class="premium">-$0.04</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="long-iron-condor">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 아이언 콘도르</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">풋 구매</span>행사가</span> <span class="hl">아래</span> 또는 <span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">콜 구매</span>행사가</span> <span class="hl">위로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (숏 풋 / 롱 풋 / 롱 콜 / 숏 콜)</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$703</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.92  최저가 $0.19</div>
+        </div>
+        <div class="premium pay">$1.12</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.93  최저가 $0.64</div>
+        </div>
+        <div class="premium pay">$1.15</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.91  최저가 $0.58</div>
+        </div>
+        <div class="premium pay">$1.08</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.89  최저가 $0.46</div>
+        </div>
+        <div class="premium pay">$1.07</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.88  최저가 $0.66</div>
+        </div>
+        <div class="premium pay">$1.05</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.86  최저가 $0.25</div>
+        </div>
+        <div class="premium pay">$1.05</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$711</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$712</span></div>
+          <div class="strike-sub">이론가격 $0.85  최저가 $0.42</div>
+        </div>
+        <div class="premium pay">$1.03</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$711</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$712</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$713</span></div>
+          <div class="strike-sub">이론가격 $0.84  최저가 $0.43</div>
+        </div>
+        <div class="premium pay">$1.01</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="short-iron-butterfly">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">숏 아이언 버터플라이</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc sell" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">풋 판매</span>행사가</span>와 <span class="sc sell" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">콜 판매</span>행사가</span> <span class="hl">사이에서</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (롱 풋 / 숏 풋 / 숏 콜 / 롱 콜)</span>
+    <span>받을 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$703</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.97  최저가 $1.52</div>
+        </div>
+        <div class="premium">$0.74</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$703.26 ~ $704.74</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.96  최저가 $0.13</div>
+        </div>
+        <div class="premium">$0.69</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$704.31 ~ $705.69</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.97  최저가 $0.74</div>
+        </div>
+        <div class="premium">$0.79</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$705.21 ~ $706.79</strong> 사이</div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.95  최저가 $0.55</div>
+        </div>
+        <div class="premium">$0.78</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$706.22 ~ $707.78</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.94  최저가 $0.48</div>
+        </div>
+        <div class="premium">$0.76</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$707.24 ~ $708.76</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.94  최저가 $0.76</div>
+        </div>
+        <div class="premium">$0.75</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$708.25 ~ $709.75</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.93  최저가 $0.22</div>
+        </div>
+        <div class="premium">$0.73</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$709.27 ~ $710.73</strong> 사이</div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc buy"><span class="sc-lbl">풋 구매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">풋 판매</span>$711</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$711</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$712</span></div>
+          <div class="strike-sub">이론가격 $0.91  최저가 $0.46</div>
+        </div>
+        <div class="premium">$0.72</div>
+      </div>
+      <div class="bep-line">손익분기점 <strong>$710.28 ~ $711.72</strong> 사이</div>
+    </div>
+
+    <div class="row">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips">
+            <span class="sc buy"><span class="sc-lbl">풋 구매</span>$700</span>
+            <span class="sc-slash">/</span>
+            <span class="sc sell"><span class="sc-lbl">풋 판매</span>$701</span>
+            <span class="sc-slash">/</span>
+            <span class="sc sell"><span class="sc-lbl">콜 판매</span>$701</span>
+            <span class="sc-slash">/</span>
+            <span class="sc buy"><span class="sc-lbl">콜 구매</span>$702</span>
+          </div>
+          <div class="strike-sub">이론가격 $0.88&nbsp; 최저가 $0.03</div>
+        </div>
+        <div class="premium">-$0.09</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="screen strategy-view" data-view="long-iron-butterfly">
+  <div class="header">
+    <div class="left">
+      <span class="back">←</span>
+      <span class="symbol">XSP <span class="symbol-sub">Mini S&P 500 Index</span></span>
+    </div>
+    <span class="setting">│ 설정</span>
+  </div>
+  <div class="title-block">
+    <div class="title-row">
+      <span class="title">롱 아이언 버터플라이</span>
+      <span class="title-help">?</span>
+    </div>
+    <div class="title-desc"><span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">풋 구매</span>행사가</span> <span class="hl">아래</span> 또는 <span class="sc buy" style="display:inline-flex;vertical-align:middle;font-size:12px;padding:1px 7px"><span class="sc-lbl">콜 구매</span>행사가</span> <span class="hl">위로</span> 끝나야 유리해요.</div>
+  </div>
+  <div class="expiry-tabs">
+    <div class="expiry-tab active"><span class="date">4월 22일</span><span class="sub">0일 후 만료</span></div>
+    <div class="expiry-tab"><span class="date">4월 23일</span><span class="sub">1일</span></div>
+    <div class="expiry-tab"><span class="date">4월 24일</span><span class="sub">2일</span></div>
+    <div class="expiry-tab"><span class="date">4월 27일</span><span class="sub">5일</span></div>
+  </div>
+  <div class="col-header">
+    <span>행사가 (숏 풋 / 롱 풋 / 롱 콜 / 숏 콜)</span>
+    <span>지불 프리미엄</span>
+  </div>
+  <div class="chain">
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$703</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$704</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$705</span></div>
+          <div class="strike-sub">이론가격 $0.96  최저가 $1.52</div>
+        </div>
+        <div class="premium pay">$1.20</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$704</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$705</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$706</span></div>
+          <div class="strike-sub">이론가격 $0.96  최저가 $0.13</div>
+        </div>
+        <div class="premium pay">$1.15</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$705</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$706</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$707</span></div>
+          <div class="strike-sub">이론가격 $0.97  최저가 $0.74</div>
+        </div>
+        <div class="premium pay">$1.19</div>
+      </div>
+    </div>
+
+    <div class="current-price">
+      <div class="divider-strip">
+        <div class="current-price-pill">현재가 $706.40</div>
+      </div>
+    </div>
+
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$706</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$707</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$708</span></div>
+          <div class="strike-sub">이론가격 $0.94  최저가 $0.55</div>
+        </div>
+        <div class="premium pay">$1.13</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$707</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$708</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$709</span></div>
+          <div class="strike-sub">이론가격 $0.95  최저가 $0.48</div>
+        </div>
+        <div class="premium pay">$1.13</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$708</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$709</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$710</span></div>
+          <div class="strike-sub">이론가격 $0.93  최저가 $0.76</div>
+        </div>
+        <div class="premium pay">$1.12</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$709</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$710</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$711</span></div>
+          <div class="strike-sub">이론가격 $0.93  최저가 $0.22</div>
+        </div>
+        <div class="premium pay">$1.11</div>
+      </div>
+    </div>
+    <div class="row neutral">
+      <div class="row-top">
+        <div>
+          <div class="strike-chips"><span class="sc sell"><span class="sc-lbl">풋 판매</span>$710</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">풋 구매</span>$711</span><span class="sc-slash">/</span><span class="sc buy"><span class="sc-lbl">콜 구매</span>$711</span><span class="sc-slash">/</span><span class="sc sell"><span class="sc-lbl">콜 판매</span>$712</span></div>
+          <div class="strike-sub">이론가격 $0.92  최저가 $0.46</div>
+        </div>
+        <div class="premium pay">$1.11</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  const chips = document.querySelectorAll('.strategy-chip');
+  const views = document.querySelectorAll('.strategy-view');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.id;
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      views.forEach(v => {
+        if (v.dataset.view === id) v.classList.add('active');
+        else v.classList.remove('active');
+      });
+      window.scrollTo(0, 0);
+    });
+  });
+</script>
+
+
+<script>
+document.querySelectorAll('.chain').forEach(chain => {
+  let bannerInserted = false;
+  chain.querySelectorAll('.row').forEach(row => {
+    const premEl = row.querySelector('.premium');
+    if (!premEl) return;
+    const val = parseFloat(premEl.textContent.replace(/[^0-9.\-]/g,''));
+    if (!isNaN(val) && val <= 0) {
+      // 배너 — 첫 음수 행 앞에 한 번만
+      if (!bannerInserted) {
+        const banner = document.createElement('div');
+        banner.className = 'warn-banner';
+        banner.innerHTML = '<div class="warn-icon">⚠️</div><div class="warn-text"><b>아래 항목은 현재 호가로 수취가 불가해요.</b><br>판매 레그보다 구매 레그 호가가 높아 프리미엄이 음수입니다. 호가가 유리하게 바뀌면 자동으로 활성화돼요.</div>';
+        chain.insertBefore(banner, row);
+        bannerInserted = true;
+      }
+      // 행 비활성화
+      row.classList.add('disabled');
+      row.style.pointerEvents = 'none';
+      const bep = row.querySelector('.bep-line');
+      if (bep) bep.remove();
+      const wrap = document.createElement('div');
+      wrap.className = 'unavail-wrap';
+      wrap.innerHTML = '<div class="unavail-badge"><span class="dot"></span>현재 호가로 수취 불가</div><span class="unavail-reason">호가 역전 상태</span>';
+      row.appendChild(wrap);
+    }
+  });
+});
+</script>
+
+</body>
+</html>
