@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<style>
+  :root {
+    --fg: #1f1f1f;
+    --muted: #6b6b6b;
+    --border: #e5e5e5;
+    --bg-soft: #f7f7f7;
+    --primary: #18a0fb;
+    --ok: #1f9a4f;
+    --warn: #c97e10;
+    --err: #c0392b;
+  }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    margin: 0;
+    padding: 16px;
+    font-size: 12px;
+    color: var(--fg);
+    background: #fff;
+  }
+  h3 { margin: 0 0 6px; font-size: 12px; font-weight: 600; }
+  p  { margin: 0 0 10px; color: var(--muted); line-height: 1.5; }
+  .section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .section:last-child { border-bottom: none; padding-bottom: 0; }
+  .row { display: flex; gap: 8px; }
+  button, .file-label {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    color: var(--fg);
+    font-family: inherit;
+  }
+  button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  button:hover, .file-label:hover { filter: brightness(0.97); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  input[type=file] { display: none; }
+  #status {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    padding: 8px 10px;
+    background: var(--bg-soft);
+    border-radius: 4px;
+    min-height: 18px;
+    max-height: 220px;
+    overflow-y: auto;
+    line-height: 1.5;
+  }
+  #status > div { padding: 1px 0; }
+  .ok   { color: var(--ok); }
+  .warn { color: var(--warn); }
+  .err  { color: var(--err); }
+  .muted { color: var(--muted); }
+  .filehint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="section">
+  <h3>1. Export — 한국어 텍스트 추출</h3>
+  <p>현재 파일의 모든 페이지를 스캔해서 한글 텍스트만 JSON으로 다운로드합니다. 숫자·영문·코드는 자동 스킵.</p>
+  <div class="row">
+    <button class="primary" id="btnExport">Export texts.json</button>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Import — 영문판으로 교체</h3>
+  <p>Claude가 만든 translations.json을 업로드하면 노드 ID 기준으로 텍스트가 교체됩니다.</p>
+  <div class="row">
+    <label class="file-label" for="fileInput" id="fileLabel">Choose translations.json</label>
+    <input type="file" id="fileInput" accept="application/json,.json" />
+  </div>
+  <div class="filehint" id="fileHint">파일을 선택하지 않았습니다.</div>
+  <div class="row" style="margin-top:8px">
+    <button class="primary" id="btnImport" disabled>Import & replace</button>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Status</h3>
+  <div id="status"><div class="muted">Ready.</div></div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status');
+  let pendingFile = null;
+
+  function log(msg, cls) {
+    const line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = msg;
+    statusEl.appendChild(line);
+    statusEl.scrollTop = statusEl.scrollHeight;
+  }
+  function clearStatus() { statusEl.innerHTML = ''; }
+
+  $('btnExport').onclick = () => {
+    clearStatus();
+    log('Exporting...');
+    parent.postMessage({ pluginMessage: { type: 'export' } }, '*');
+  };
+
+  $('fileInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        pendingFile = JSON.parse(reader.result);
+        const count = Object.keys(pendingFile.translations || {}).length;
+        $('fileHint').textContent = file.name + ' — ' + count + ' translations';
+        $('btnImport').disabled = count === 0;
+        if (count === 0) {
+          log('파일에 translations 항목이 없습니다.', 'err');
+        }
+      } catch (err) {
+        $('fileHint').textContent = file.name + ' — invalid JSON';
+        log('Invalid JSON: ' + err.message, 'err');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  $('btnImport').onclick = () => {
+    if (!pendingFile) return;
+    clearStatus();
+    log('Importing...');
+    $('btnImport').disabled = true;
+    parent.postMessage({ pluginMessage: { type: 'import', data: pendingFile } }, '*');
+  };
+
+  window.onmessage = (e) => {
+    const msg = e.data.pluginMessage;
+    if (!msg) return;
+
+    if (msg.type === 'progress') {
+      log(msg.message, 'muted');
+    } else if (msg.type === 'export-done') {
+      const blob = new Blob([JSON.stringify(msg.payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = msg.suggestedFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const s = msg.payload.stats;
+      log('OK  Exported ' + s.exported + ' / scanned ' + s.totalScanned + ' (skipped ' + s.skipped + ')', 'ok');
+      const r = s.skippedReasons || {};
+      const reasons = Object.keys(r).map((k) => k + ':' + r[k]).join(', ');
+      if (reasons) log('     Skipped reasons — ' + reasons, 'muted');
+      log('     File: ' + msg.suggestedFilename, 'muted');
+    } else if (msg.type === 'import-done') {
+      const r = msg.report;
+      log('OK  Replaced ' + r.success + ' / ' + r.total + ' nodes.', 'ok');
+      if (r.notFound && r.notFound.length)
+        log('WARN  Not found: ' + r.notFound.length + ' (node may have been deleted in this file)', 'warn');
+      if (r.mixedStyleWarnings && r.mixedStyleWarnings.length)
+        log('WARN  Mixed-style nodes: ' + r.mixedStyleWarnings.length + ' (style unified to first segment — review)', 'warn');
+      if (r.overflowWarnings && r.overflowWarnings.length)
+        log('WARN  Possible overflow: ' + r.overflowWarnings.length + ' fixed-size nodes much longer in EN', 'warn');
+      if (r.shrunk && r.shrunk.length) {
+        log('INFO  Auto-shrunk font in ' + r.shrunk.length + ' fixed-size node(s):', 'muted');
+        r.shrunk.slice(0, 8).forEach(function (s) {
+          var tag = s.expandedToWrap ? '  [+wrap]' : '';
+          log('       ' + s.from + 'pt → ' + s.to + 'pt  (' + (s.name || s.id) + ')' + tag, 'muted');
+        });
+      }
+      if (r.missingFontSubs && r.missingFontSubs.length) {
+        log('INFO  Substituted ' + r.missingFontSubs.length + ' missing font(s):', 'muted');
+        r.missingFontSubs.slice(0, 8).forEach(function (s) {
+          log('       ' + s.from + '  →  ' + s.to, 'muted');
+        });
+      }
+      if (r.missingFontUnresolved && r.missingFontUnresolved.length) {
+        log('FAIL  No fallback for ' + r.missingFontUnresolved.length + ' font(s):', 'err');
+        r.missingFontUnresolved.slice(0, 5).forEach(function (f) { log('       ' + f, 'err'); });
+      }
+      if (r.replaceErrors && r.replaceErrors.length) {
+        log('FAIL  Replace errors: ' + r.replaceErrors.length, 'err');
+        log('       Sample errors (first 3):', 'err');
+        r.replaceErrors.slice(0, 3).forEach(function (e) {
+          log('       [' + (e.font || '') + '] ' + e.error, 'err');
+        });
+      }
+      $('btnImport').disabled = false;
+    } else if (msg.type === 'error') {
+      log('ERROR: ' + msg.message, 'err');
+      $('btnImport').disabled = false;
+    }
+  };
+</script>
+
+</body>
+</html>
