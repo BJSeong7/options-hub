@@ -1,0 +1,15 @@
+# Claude Code settings
+.claude/
+
+# Source PDFs (large, regenerable from authoritative source)
+*.pdf
+
+# Raw renders (intermediate; can be regenerated from PDFs)
+assets/images/raw/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
